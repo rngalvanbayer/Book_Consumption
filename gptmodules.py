@@ -66,7 +66,7 @@ def get_finished_data(filename, gptkey, gptendpoint):
             mat_no = str(dat[0]).split('/')[0]
             bat_no = str(dat[2])
             quantity = str(str(dat[4]).replace('.','')).replace(',','')
-            new_rows = pd.DataFrame({'Material No' : [mat_no], 'Batch No': [bat_no] , 'Quantity': [quantity]})
+            new_rows = pd.DataFrame({'Material No' : [mat_no], 'Batch No': [bat_no] , 'Quantity': [quantity], 'Material Type': 'Finished'})
             data = pd.concat([data, new_rows], ignore_index=True)
         except Exception as e:
            print(f"An unexpected error occurred: {e}")
@@ -135,7 +135,7 @@ def get_provided_data(filename, gptkey, gptendpoint):
             mat_no = str(dat[0])
             bat_no = str(dat[2])
             quantity = str(str(dat[4]).replace('.','')).replace(',','')
-            new_rows = pd.DataFrame({'Material No' : [mat_no], 'Batch No': [bat_no] , 'Quantity': [quantity]})
+            new_rows = pd.DataFrame({'Material No' : [mat_no], 'Batch No': [bat_no] , 'Quantity': [quantity] , 'Material Type': 'Provided'})
             data = pd.concat([data, new_rows], ignore_index=True)
         except Exception as e:
            print(f"An unexpected error occurred: {e}")
