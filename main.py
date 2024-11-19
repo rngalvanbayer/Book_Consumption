@@ -44,11 +44,11 @@ def main():
     provided_data.to_excel('provided_materials.xlsx', index=False)
 
     # ===== Databricks =====
-    dbxcat = "iaut_dmart"
-    dbxschema = "exp_ic_162105_open_items"
-    dbxhost = "adb-4071335540424391.11.azuredatabricks.net"
-    dbxpath = "/sql/1.0/warehouses/63b06d5d61cc1af1"
-    dbxtoken = "dapi1d3596c872e65f3f95430ff5a75f6d90-2"
+    #dbxcat = "iaut_dmart"
+    #dbxschema = "exp_ic_162105_open_items"
+    #dbxhost = "adb-4071335540424391.11.azuredatabricks.net"
+    #dbxpath = "/sql/1.0/warehouses/63b06d5d61cc1af1"
+    #dbxtoken = "dapi1d3596c872e65f3f95430ff5a75f6d90-2"
 
     connection = sql.connect(server_hostname = dbxhost, http_path = dbxpath, access_token = dbxtoken)
     cursor = connection.cursor()
