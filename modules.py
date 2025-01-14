@@ -3,6 +3,11 @@ import requests
 from github import Github
 import requests
 import os
+import re 
+import pandas as pd 
+
+def extract_numbers(s):
+    return re.findall(r'\d+', s)
 
 def get_graph_token():
     g = Github(credentials.GITHUBTOKEN)
@@ -128,3 +133,19 @@ def download_file(access_token, site_id, drive_id, item_id, file_name):
     with open(file_name, 'wb') as f:
         f.write(response.content)
     print(f"Downloaded file: {file_name}")
+    
+def alternate_rows(df1, df2):
+    # Create an empty list to hold the combined rows
+    combined_rows = []
+    
+    # Get the length of the longer DataFrame
+    max_len = max(len(df1), len(df2))
+    
+    for i in range(max_len):
+        if i < len(df1):
+            combined_rows.append(df1.iloc[i])
+        if i < len(df2):
+            combined_rows.append(df2.iloc[i])
+    
+    # Create a new DataFrame from the combined rows
+    return pd.DataFrame(combined_rows)

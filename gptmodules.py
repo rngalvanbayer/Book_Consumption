@@ -66,14 +66,12 @@ def get_finished_data(filename, gptkey, gptendpoint):
             mat_no = str(dat[0]).split('/')[0]
             bat_no = str(dat[2])
             quantity = str(str(dat[4]).replace('.','')).replace(',','')
-            new_rows = pd.DataFrame({'Material No' : [mat_no], 'Batch No': [bat_no] , 'Quantity': [quantity], 'Material Type': 'Finished'})
+            new_rows = pd.DataFrame({ 'Material Type': 'Finished Good','Material No' : [mat_no], 'Batch': [bat_no] , 'Qty': [quantity]})
             data = pd.concat([data, new_rows], ignore_index=True)
         except Exception as e:
            print(f"An unexpected error occurred: {e}")
            print(rows[i])
     return data
-
-
 
 def get_provided_data(filename, gptkey, gptendpoint):
     pdf_file_path = filename
@@ -135,8 +133,72 @@ def get_provided_data(filename, gptkey, gptendpoint):
             mat_no = str(dat[0])
             bat_no = str(dat[2])
             quantity = str(str(dat[4]).replace('.','')).replace(',','')
-            new_rows = pd.DataFrame({'Material No' : [mat_no], 'Batch No': [bat_no] , 'Quantity': [quantity] , 'Material Type': 'Provided'})
+            new_rows = pd.DataFrame({ 'Material Type': 'Bulk', 'Material No' : [mat_no], 'Batch': [bat_no] , 'Qty': [quantity] })
             data = pd.concat([data, new_rows], ignore_index=True)
+        except Exception as e:
+           print(f"An unexpected error occurred: {e}")
+           print(rows[i])
+    return data
+
+def get_order_item(filename, gptkey, gptendpoint):
+    pdf_file_path = filename
+    images = convert_from_path(pdf_file_path, dpi=600)          # we can modify the dpi or move to grayscale
+    filename =''
+    for i, image in enumerate(images):
+      image.save(f'page_{i + 1}.png', 'PNG') 
+      if i < 1:
+        filename = f'page_{i + 1}.png'
+    encoded_image = base64.b64encode(open(filename, 'rb').read()).decode('ascii')
+    headers = {"Content-Type": "application/json", "api-key": gptkey}
+
+    # Payload for the request
+    payload = {
+      "messages": [
+           {
+          "role": "system",
+          "content": [
+            {
+              "type": "text",
+              "text": "You are an American English document scanner"
+            }
+          ],
+          "role": "user",
+          "content": [
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": f"data:image/jpeg;base64,{encoded_image}"
+              }
+            },
+            {
+              "type": "text",
+              "text": "What is the BAYER ORDER NUMBER of the document. This is the text under the BAYER ORDER NUMBER label"
+            }
+          ]
+        }
+      ],
+      "temperature": 1,
+      #"top_p": 0.1,
+      "max_tokens": 800
+    }
+    # Send request
+    try:
+        response = requests.post(gptendpoint, headers=headers, json=payload)
+        #response.raise_for_status() 
+        print(response)
+    except requests.RequestException as e:
+        raise SystemExit(f"Failed to make the request. Error: {e}")
+    
+    delete_file(filename)
+    results = response.json()['choices'][0]['message']['content'] 
+    rows = str(results).splitlines()
+    print(results)
+    data = pd.DataFrame()
+
+    # format data as pandas df
+    for i in range(len(rows)):
+        try:
+            print(rows)
         except Exception as e:
            print(f"An unexpected error occurred: {e}")
            print(rows[i])

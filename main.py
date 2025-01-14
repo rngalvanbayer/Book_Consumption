@@ -22,6 +22,8 @@ def main():
     #no_of_files = 1
     finished_data = pd.DataFrame()
     provided_data = pd.DataFrame()
+    order_item = pd.DataFrame()
+    
     # ======= start iteration here ========= 
     for i in range(no_of_files):
         filename = files[i]['name']
@@ -31,18 +33,30 @@ def main():
         # scan the file - finished data 
         f_data = gptmodules.get_finished_data(filename, credentials.GPT4V_KEY, credentials.GPT4V_ENDPOINT)
         finished_data = pd.concat([finished_data, f_data], ignore_index=True)
-        print(f_data)
+        #print(f_data)
 
         # scan the file - provided material
         p_data = gptmodules.get_provided_data(filename, credentials.GPT4V_KEY, credentials.GPT4V_ENDPOINT)
         provided_data = pd.concat([provided_data, p_data], ignore_index=True)
-        print(p_data)
+        #print(p_data)
+        
+        # scan the filename - order item
+        o_item = modules.extract_numbers(filename)
+        order_item = o_item[0]
+        print(order_item)
 
         # delete the pdf file and pngs
         modules.delete_file(filename)
+        f_data['Material No'] = str(order_item)
+        merged_df = modules.alternate_rows(f_data, p_data)
+        merged_df['Remarks'] = " "
+        print(merged_df.to_markdown())
+        fname = "GVT2-" + order_item + ".xlsx"
+        merged_df.to_excel(fname, index=False, sheet_name=order_item)
+        
     
-    finished_data.to_excel('finished_product.xlsx', index=False)
-    provided_data.to_excel('provided_materials.xlsx', index=False)
+    #finished_data.to_excel('finished_product.xlsx', index=False)
+    #provided_data.to_excel('provided_materials.xlsx', index=False)
 
     # ===== Databricks =====
     dbxcat = "iaut_dmart"
@@ -75,10 +89,10 @@ def main():
     for i in range(len(provided_data)):
         mn = str(provided_data['Material No'][i]).zfill(len(str(provided_data['Material No'][i]))+10)
         #print(mn)
-        bn = provided_data['Batch No'][i]
+        bn = provided_data['Batch'][i]
         #bn = finished_data[i]['Batch No']
         sqlquery = "SELECT MATNR, CHARG, CINSM, LFMON FROM efdataonelh_prd.generaldiscovery_matmgt_r.all_mchbh_view where MATNR = '" + mn + "' AND CHARG = '" + bn + "'  AND LFGJA = '2024'"
-        print(sqlquery)
+        #print(sqlquery)
         try:
             df = pd.read_sql_query(sqlquery, cnxn)
             pvd = pd.concat([pvd, df], ignore_index=True)
@@ -86,7 +100,7 @@ def main():
         except:
             print("error")
 
-    print(pvd.to_markdown())
+    #print(pvd.to_markdown())
 
 if __name__ == "__main__":
     main()
