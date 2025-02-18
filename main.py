@@ -21,8 +21,8 @@ def main():
     files = modules.get_sharepoint_files(access_token, 
                                          site_id, folder_path)          # list of all files in child folder
 
-    no_of_files = len(files)
-    #no_of_files = 1
+    #n_of_files = len(files)
+    no_of_files = 1
 
     
     
@@ -96,11 +96,11 @@ def main():
     # loop around the numbers of GVT2 excel files
     for i in range(len(gvt2_df)):
         filename = gvt2_df.iloc[i]['Filename']
-        print(filename)
+        #print(filename)
         
         # load the excel file to a temporary dataframe
         df = pd.read_excel(filename)
-        print(df.to_markdown())
+        #print(df.to_markdown())
         
         #loop around the df:
         for j in range(len(df)):
@@ -131,7 +131,7 @@ def main():
                     print("error")
             else:
                 sqlquery = "SELECT MATNR, CHARG, CINSM, CLABS, LFMON, LFGJA FROM efdataonelh_prd.generaldiscovery_matmgt_r.all_mchbh_view where MATNR LIKE '%" + matno + "' AND CHARG = '" + batch + "' AND LFGJA IN ('2024','2025')"
-                #print(sqlquery)
+                print(sqlquery)
                 try:
                     df2 = pd.read_sql_query(sqlquery, cnxn)
                     dbx_qty = df2['CINSM'].sum()
