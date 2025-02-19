@@ -3,6 +3,7 @@ test.py
 test2.py
 test/
 *.xlsx 
+GVT2-2111910627.xlsx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
