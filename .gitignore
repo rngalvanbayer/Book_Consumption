@@ -4,6 +4,7 @@ test2.py
 test/
 *.xlsx 
 GVT2-2111910627.xlsx
+main2.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
