@@ -22,9 +22,8 @@ def main():
     files = modules.get_sharepoint_files(access_token, 
                                          site_id, folder_path)          # list of all files in child folder
 
-    no_of_files = len(files)
-    #no_of_files = 1
-  
+    #n_of_files = len(files)
+    no_of_files = 1
 
     
     
@@ -36,22 +35,19 @@ def main():
     for i in range(no_of_files):
         filename = files[i]['name']
         if str('.pdf') in str(filename):
-            print(filename)
+                      
             file_id = modules.get_file_id(access_token, site_id, drive_id, filename)
             modules.download_file(access_token, site_id, drive_id, file_id, filename)
 
             # scan the file - finished data 
-            #f_data = gptmodules.get_finished_data(filename, credentials.GPT4V_KEY, credentials.GPT4V_ENDPOINT)
-            #finished_data = pd.concat([finished_data, f_data], ignore_index=True)
+            f_data = gptmodules.get_finished_data(filename, credentials.GPT4V_KEY, credentials.GPT4V_ENDPOINT)
+            finished_data = pd.concat([finished_data, f_data], ignore_index=True)
             #print(f_data)
 
             # scan the file - provided material
-            #p_data = gptmodules.get_provided_data(filename, credentials.GPT4V_KEY, credentials.GPT4V_ENDPOINT)
-            #provided_data = pd.concat([provided_data, p_data], ignore_index=True)
+            p_data = gptmodules.get_provided_data(filename, credentials.GPT4V_KEY, credentials.GPT4V_ENDPOINT)
+            provided_data = pd.concat([provided_data, p_data], ignore_index=True)
             #print(p_data)
-            
-            # 
-            f_data, p_data = encode.encode(filename)
         
             # scan the filename - order item
             o_item = modules.extract_numbers(filename)
@@ -60,7 +56,7 @@ def main():
 
             # delete the pdf file and pngs
             modules.delete_file(filename)
-            #f_data['Material No'] = str(order_item)         # order item removed
+            f_data['Material No'] = str(order_item)
             merged_df = modules.alternate_rows(f_data, p_data)
             merged_df['Remarks'] = " "
             #print(merged_df.to_markdown())
@@ -136,7 +132,7 @@ def main():
                     print("error")
             else:
                 sqlquery = "SELECT MATNR, CHARG, CINSM, CLABS, LFMON, LFGJA FROM efdataonelh_prd.generaldiscovery_matmgt_r.all_mchbh_view where MATNR LIKE '%" + matno + "' AND CHARG = '" + batch + "' AND LFGJA IN ('2024','2025')"
-                #print(sqlquery)
+                print(sqlquery)
                 try:
                     df2 = pd.read_sql_query(sqlquery, cnxn)
                     dbx_qty = df2['CINSM'].sum()
