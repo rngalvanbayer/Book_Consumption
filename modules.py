@@ -90,7 +90,7 @@ def download_file(access_token, site_id, drive_id, filename):
         print("Failed to download file:", response.status_code, response.json())
 
 def get_file_id(access_token, site_id, drive_id, filename):
-    filepath = "/Files/" + filename
+    filepath = "/Encoding/" + filename
     url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives/{drive_id}/root:{filepath}"
     headers = {"Authorization": f"Bearer {access_token}"}
     
@@ -100,7 +100,7 @@ def get_file_id(access_token, site_id, drive_id, filename):
     return item_id
 
 def download_file_old(access_token, site_id, drive_id, filename):
-    filepath = "/Files/" + filename
+    filepath = "/Encoding/" + filename
     url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives/{drive_id}/root:{filepath}"
     headers = {"Authorization": f"Bearer {access_token}"}
     
@@ -149,3 +149,24 @@ def alternate_rows(df1, df2):
     
     # Create a new DataFrame from the combined rows
     return pd.DataFrame(combined_rows)
+
+def upload_file(access_token, site_id, drive_id, folder_name, file_name):
+    filepath = file_name
+    url =  f'https://graph.microsoft.com/v1.0/sites/{site_id}/drives/{drive_id}/items/root:/{folder_name}/{file_name}:/content'
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': str(os.path.getsize(file_name))
+    }
+    with open(filepath, 'rb') as file:
+        response = requests.put( url, headers=headers, data=file)
+        response.raise_for_status()
+        
+def delete_file_sp(access_token, drive_id, item_id):
+    #url =  f'https://graph.microsoft.com/v1.0/sites/{site_id}/drives/{drive_id}/items/{item_id}'
+    url =  f"https://graph.microsoft.com/v1.0/drives/{drive_id}/items/{item_id}"
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+    response = requests.delete(url, headers=headers)
+    response.raise_for_status()

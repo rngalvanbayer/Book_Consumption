@@ -6,7 +6,7 @@ from credentials import dbxcat, dbxhost, dbxpath, dbxschema, dbxtoken
 import os
 import openpyxl
 import encode
-import convert
+
 
 
 
@@ -17,14 +17,13 @@ def main():
                                  'bayergroup.sharepoint.com', 
                                  'BookConsumption')                     # sharepoint site id
     drive_id= modules.get_drive_id(access_token, site_id)               # sharepoint drive id
-    folder_path = 'Files'                                       # child folder in sharepoint
+    folder_path = 'Encoding'                                       # child folder in sharepoint
     files = modules.get_sharepoint_files(access_token, 
                                          site_id, folder_path)          # list of all files in child folder
-
+    df_files = files
     no_of_files = len(files)
     #no_of_files = 2
   
-    order_item = pd.DataFrame()
     
     # ======= start iteration here ========= 
     for i in range(no_of_files):
@@ -33,6 +32,7 @@ def main():
             print(filename)
             file_id = modules.get_file_id(access_token, site_id, drive_id, filename)
             modules.download_file(access_token, site_id, drive_id, file_id, filename)
+            print("==> Downloading " + filename)
 
             # scan the file - finished data 
             #f_data = gptmodules.get_finished_data(filename, credentials.GPT4V_KEY, credentials.GPT4V_ENDPOINT)
@@ -157,7 +157,7 @@ def main():
     # Post-formatting excel        
     for i in range(len(gvt2_df)):
         filename = gvt2_df.iloc[i]['Filename']
-        print(filename)
+        #print(filename)
         df = pd.read_excel(filename)
         workbook = openpyxl.load_workbook(filename=filename)
         sheet = workbook.active
@@ -204,5 +204,27 @@ def main():
         df = pd.read_excel(filename)
         print(df.to_markdown())    
     
+    # upload excel files to sharepoint        
+    for i in range(len(gvt2_df)):
+        filename = gvt2_df.iloc[i]['Filename']
+        modules.upload_file(access_token, site_id, drive_id, 'Report', filename)
+        print("==> Uploading " + filename)
+        
+    
+    # delete pdf files in sharepoint
+    for i in range(len(df_files)):
+        filename = df_files[i]['name']
+        if str('.pdf') in str(filename):
+            file_id = modules.get_file_id(access_token, site_id, drive_id, filename)
+            #modules.delete_file_sp(access_token, site_id, drive_id, file_id, filename)
+            modules.delete_file_sp(access_token, drive_id, file_id)
+            print("==> Delete " + filename)
+    
+    for i in range(len(gvt2_df)):
+        filename = gvt2_df.iloc[i]['Filename']
+        modules.delete_file(filename)
+        print("==> Delete " + filename)
+        
+
 if __name__ == "__main__":
     main()
