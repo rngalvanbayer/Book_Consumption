@@ -1,13 +1,12 @@
 import modules
 import credentials
 import pandas as pd
-import gptmodules
 import sqlalchemy
-from databricks import sql
 from credentials import dbxcat, dbxhost, dbxpath, dbxschema, dbxtoken
 import os
 import openpyxl
 import encode
+import convert
 
 
 
@@ -18,18 +17,13 @@ def main():
                                  'bayergroup.sharepoint.com', 
                                  'BookConsumption')                     # sharepoint site id
     drive_id= modules.get_drive_id(access_token, site_id)               # sharepoint drive id
-    folder_path = 'Files'                                               # child folder in sharepoint
+    folder_path = 'Files'                                       # child folder in sharepoint
     files = modules.get_sharepoint_files(access_token, 
                                          site_id, folder_path)          # list of all files in child folder
 
     no_of_files = len(files)
-    #no_of_files = 1
+    #no_of_files = 2
   
-
-    
-    
-    finished_data = pd.DataFrame()
-    provided_data = pd.DataFrame()
     order_item = pd.DataFrame()
     
     # ======= start iteration here ========= 
@@ -49,23 +43,23 @@ def main():
             #p_data = gptmodules.get_provided_data(filename, credentials.GPT4V_KEY, credentials.GPT4V_ENDPOINT)
             #provided_data = pd.concat([provided_data, p_data], ignore_index=True)
             #print(p_data)
-            
-            # 
+
+ 
             f_data, p_data = encode.encode(filename)
         
             # scan the filename - order item
-            o_item = modules.extract_numbers(filename)
-            order_item = o_item[0]
-            print(order_item)
+            o_item = filename[3:]
+            o_item = o_item[:-4]
+            #print(o_item)
 
             # delete the pdf file and pngs
             modules.delete_file(filename)
             #f_data['Material No'] = str(order_item)         # order item removed
             merged_df = modules.alternate_rows(f_data, p_data)
-            merged_df['Remarks'] = " "
+            merged_df['Qty'] = merged_df['Qty'].str.replace(',', '').str.replace('.', '', regex=False).astype(int)
             #print(merged_df.to_markdown())
-            fname = "GVT2-" + order_item + ".xlsx"
-            merged_df.to_excel(fname, index=False, sheet_name=order_item)
+            fname = "GVT2-" + o_item + ".xlsx"
+            merged_df.to_excel(fname, index=False, sheet_name=o_item)
 
     # ===== Databricks =====
     dbxcat = "efdataonelh_prd"
@@ -86,7 +80,7 @@ def main():
     )
 
     cnxn = engine.connect()
-    # === EEND Databricks
+    # === END Databricks
 
     # list all files in the directory
     files = os.listdir()
@@ -102,6 +96,7 @@ def main():
     for i in range(len(gvt2_df)):
         filename = gvt2_df.iloc[i]['Filename']
         #print(filename)
+        print("==> Processing "+filename) 
         
         # load the excel file to a temporary dataframe
         df = pd.read_excel(filename)
@@ -115,17 +110,22 @@ def main():
             qty = df.iloc[j]['Qty']
             #print(type)
             
+            
+            # open excel file for reading
+            workbook = openpyxl.load_workbook(filename=filename)
+            sheet = workbook.active
+            sheet['E1'] = 'Logged Qty' 
+            
             # IF type is Bulk
             if type == 'Bulk':
                 #print('bulk')
-                sqlquery = "SELECT MATNR, CHARG, CINSM, CLABS, LFMON, LFGJA FROM efdataonelh_prd.generaldiscovery_matmgt_r.all_mchbh_view where MATNR LIKE '%" + matno + "' AND CHARG = '" + batch + "' AND LFGJA IN ('2024','2025')"
+                sqlquery = "SELECT MATNR, CHARG, CINSM, CLABS, LFMON, LFGJA FROM efdataonelh_prd.generaldiscovery_matmgt_r.all_mchbh_view where MATNR LIKE '%" + matno + "' AND CHARG = '" + batch + "' AND LFGJA IN ('2024','2025') order by LFMON desc limit 1"
                 #print(sqlquery)
                 try:
                     df2 = pd.read_sql_query(sqlquery, cnxn)
+                    #print(df2.to_markdown())
                     dbx_qty = (df2['CLABS'].sum()) * 1000
                     # write the quantity to the excel file
-                    workbook = openpyxl.load_workbook(filename=filename)
-                    sheet = workbook.active
                     cellno = "E" + str(j+2)
                     sheet[cellno] = dbx_qty 
                     workbook.save(filename)
@@ -135,14 +135,16 @@ def main():
                 except:
                     print("error")
             else:
-                sqlquery = "SELECT MATNR, CHARG, CINSM, CLABS, LFMON, LFGJA FROM efdataonelh_prd.generaldiscovery_matmgt_r.all_mchbh_view where MATNR LIKE '%" + matno + "' AND CHARG = '" + batch + "' AND LFGJA IN ('2024','2025')"
+                #print('finished goods')
+                sqlquery = "SELECT MATNR, CHARG, CINSM, CLABS, LFMON, LFGJA FROM efdataonelh_prd.generaldiscovery_matmgt_r.all_mchbh_view where MATNR LIKE '%" + matno + "' AND CHARG = '" + batch + "' AND LFGJA IN ('2024','2025') order by LFMON desc limit 6"
                 #print(sqlquery)
                 try:
                     df2 = pd.read_sql_query(sqlquery, cnxn)
+                    #print(df2.to_markdown())
                     dbx_qty = df2['CINSM'].sum()
+                    if dbx_qty == 0:
+                        dbx_qty = df2['CLABS'].sum()
                     # write the quantity to the excel file
-                    workbook = openpyxl.load_workbook(filename=filename)
-                    sheet = workbook.active
                     cellno = "E" + str(j+2)
                     sheet[cellno] = dbx_qty
                     workbook.save(filename)
@@ -151,7 +153,56 @@ def main():
             
                 except:
                     print("error")
+    
+    # Post-formatting excel        
+    for i in range(len(gvt2_df)):
+        filename = gvt2_df.iloc[i]['Filename']
+        print(filename)
+        df = pd.read_excel(filename)
+        workbook = openpyxl.load_workbook(filename=filename)
+        sheet = workbook.active
+        sheet['F1'] = 'diff' 
+        sheet['G1'] = "% diff" 
+        sheet['H1'] = 'Remarks'
+        for cell in sheet[1]:
+            cell.font = openpyxl.styles.Font(bold=True)
+        c = ['A1','B1','C1', 'E1', 'F1', 'G1', 'H1']
+        thin = openpyxl.styles.Side(style='thin', color='000000')  # Black thin border
+        border = openpyxl.styles.Border(left=thin, right=thin, top=thin, bottom=thin)
+        for cr in c:
+            cell = sheet[cr]
+            cell.border = border
+        sheet.column_dimensions['A'].width = 14
+        sheet.column_dimensions['B'].width = 12
+        sheet.column_dimensions['C'].width = 9
+        sheet.column_dimensions['D'].width = 12
+        sheet.column_dimensions['E'].width = 12
+        sheet.column_dimensions['F'].width = 12
+        sheet.column_dimensions['G'].width = 9
+        sheet.column_dimensions['H'].width = 20
+        workbook.save(filename)
+        
+        for j in range(len(df)):
+            type = df.iloc[j]['Material Type']
+            matno = str(df.iloc[j]['Material No'])
+            batch = str(df.iloc[j]['Batch'])
+            qty = df.iloc[j]['Qty']
+            tqty = df.iloc[j]['Logged Qty']
+            diff = abs(qty-tqty)           
+            cellno = "F" + str(j+2)
+            sheet[cellno] = diff 
+            perc = diff / qty
+            cellno = "G" + str(j+2)
+            sheet[cellno] = perc 
+            workbook.save(filename)
+        
+        for row in range(2, sheet.max_row + 1):
+            cell = sheet[f'G{row}']
+            cell.number_format = '0.00%'
+            workbook.save(filename)
             
+        df = pd.read_excel(filename)
+        print(df.to_markdown())    
     
 if __name__ == "__main__":
     main()

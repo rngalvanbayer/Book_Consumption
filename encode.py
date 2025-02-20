@@ -36,7 +36,7 @@ def encode(filename):
     p_data['Material Type']  = ''
     p_data['Material No'] = provided_material['mat']
     p_data['Batch'] = provided_material['batch']
-    p_data['Qty'] = provided_material['qty']
+    p_data['Qty'] = provided_material['qty'].astype(str).replace(".", ",")
     p_data['Material Type']  = 'Bulk'
 
 
@@ -60,11 +60,11 @@ def encode(filename):
     f_data['Material Type']  = ''
     f_data['Material No'] = finished_product['mat']
     f_data['Batch'] = finished_product['batch']
-    f_data['Qty'] = finished_product['qty']
+    f_data['Qty'] = finished_product['qty'].astype(str).replace(".", ",")
     f_data['Material Type']  = 'Finished Good'
     
-    print(f_data.to_markdown())
-    print("\n")
-    print(p_data.to_markdown())
-    print("\n")
+    #print(f_data.to_markdown())
+    #print("\n")
+    #print(p_data.to_markdown())
+    #print("\n")
     return f_data, p_data
